@@ -1,0 +1,4 @@
+aws_region     = "us-east-1"
+project_name   = "web-api"
+domain_name    = "practicedevops.site"
+hosted_zone_id = "Z0047662206C9BJHICKFA"
