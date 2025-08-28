@@ -78,8 +78,6 @@ resource "aws_acm_certificate" "cert" {
   validation_method         = "DNS"
 }
 
-# ... keep the rest of your file unchanged ...
-
 resource "aws_route53_record" "acm_validation" {
   for_each = {
     for dvo in aws_acm_certificate.cert.domain_validation_options :
@@ -99,8 +97,6 @@ resource "aws_route53_record" "acm_validation" {
   # Add this line so Terraform can update an existing validation record
   allow_overwrite = true
 }
-
-# ... keep the rest of your file unchanged ...
 
 resource "aws_acm_certificate_validation" "cert" {
   certificate_arn         = aws_acm_certificate.cert.arn

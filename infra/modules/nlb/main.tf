@@ -40,7 +40,6 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# Attach instance targets (handles unknown IDs at plan time)
 resource "aws_lb_target_group_attachment" "targets" {
   count            = length(var.targets)
   target_group_arn = aws_lb_target_group.this.arn

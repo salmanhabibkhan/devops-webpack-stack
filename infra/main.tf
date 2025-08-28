@@ -50,7 +50,7 @@ module "apigw" {
   hosted_zone_id     = var.hosted_zone_id
   private_subnet_ids = module.vpc.private_subnets
   nlb_listener_arn   = module.nlb.listener_arn
-  vpc_id             = module.vpc.vpc_id     # NEW
+  vpc_id             = module.vpc.vpc_id   
 }
 
 module "route53" {

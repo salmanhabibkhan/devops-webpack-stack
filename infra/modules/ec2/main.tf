@@ -1,6 +1,6 @@
 data "aws_ami" "al2023" {
   most_recent = true
-  owners      = ["137112412989"] # Amazon
+  owners      = ["137112412989"] # Amazon Linux Ami, You can change accordingly
 
   filter {
     name   = "name"
@@ -107,7 +107,6 @@ CW
 
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
 
-# NOTE: No app container started here. CI/CD (GitHub Actions via SSM) will deploy.
 EOT
 }
 

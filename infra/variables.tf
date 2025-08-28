@@ -5,12 +5,12 @@ variable "project_name" {
 }
 
 variable "aws_region" {
-  description = "AWS region (e.g., ap-south-1)"
+  description = "AWS region (e.g., us-east-1)"
   type        = string
 }
 
 variable "domain_name" {
-  description = "Apex domain (e.g., practicedevops.site)"
+  description = "Apex domain (e.g., salmanhabib.site)"
   type        = string
 }
 
