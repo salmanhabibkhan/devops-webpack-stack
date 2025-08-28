@@ -3,8 +3,12 @@ on:
   push:
     branches: [ "main" ]
 
+concurrency:
+  group: web-api-main
+  cancel-in-progress: false
+
 env:
-  AWS_REGION: ap-south-1
+  AWS_REGION: us-east-1
   ECR_REPO: web-api
   CONTAINER_NAME: web-api
   IMAGE_TAG: latest
@@ -15,21 +19,33 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      image_uri: ${{ steps.out.outputs.image_uri }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
-      - name: Login to ECR
+
+      - name: Login to Amazon ECR
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
+
       - name: Build and push image
         run: |
           REG="${{ steps.ecr.outputs.registry }}"
           docker build -t "$REG/${ECR_REPO}:${IMAGE_TAG}" .
           docker push "$REG/${ECR_REPO}:${IMAGE_TAG}"
+
+      - name: Resolve image digest and set output
+        id: out
+        run: |
+          REG="${{ steps.ecr.outputs.registry }}"
+          DIGEST=$(aws ecr describe-images --repository-name "${ECR_REPO}" --image-ids imageTag="${IMAGE_TAG}" --query 'imageDetails[0].imageDigest' --output text)
+          echo "image_uri=${REG}/${ECR_REPO}@${DIGEST}" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: build-and-push
@@ -43,10 +59,12 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
+
       - name: Deploy via SSM to EC2 (tag App=web-api)
+        env:
+          IMAGE_URI: ${{ needs.build-and-push.outputs.image_uri }}
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          IMAGE_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:App,Values=web-api" \
@@ -56,7 +74,8 @@ jobs:
               aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
               docker pull ${IMAGE_URI}
               docker rm -f ${CONTAINER_NAME} || true
-              docker run -d --name ${CONTAINER_NAME} -p 80:80 ${IMAGE_URI}
+              docker run -d --restart=always --name ${CONTAINER_NAME} -p 80:80 ${IMAGE_URI}
+              for i in {1..20}; do sleep 3; curl -fsS http://127.0.0.1:80/health && break || true; done
             '" \
             --max-concurrency "1" \
             --max-errors "0" \
